@@ -1,6 +1,7 @@
 package com.example.minesweeper.config;
 
 import com.example.minesweeper.handler.SocketHandler;
+import com.example.minesweeper.others.BoardUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
