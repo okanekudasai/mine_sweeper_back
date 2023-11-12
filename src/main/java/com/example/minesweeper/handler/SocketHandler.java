@@ -96,6 +96,21 @@ public class SocketHandler extends TextWebSocketHandler {
                     break;
                 }
             }
+        } else if (event.equals("player_move")) {
+            String id = data.getAsJsonObject().get("id").getAsString();
+            Double r = data.getAsJsonObject().get("r").getAsDouble();
+            Double c = data.getAsJsonObject().get("c").getAsDouble();
+            HashMap<String, Object> dto = new HashMap<>();
+            dto.put("code", "take_position");
+            HashMap<String, Object> value = new HashMap<>();
+            dto.put("value", value);
+            value.put("session_id", session.getId());
+            value.put("r", r);
+            value.put("c", c);
+            for (WebSocketSession wss : webSocketSessionSet) {
+                if (wss.getId().equals(id)) continue;
+                wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
+            }
         }
     }
 
@@ -106,6 +121,15 @@ public class SocketHandler extends TextWebSocketHandler {
         log.info("session:" + session);
         log.info("status:" + status);
         webSocketSessionSet.remove(session);
+        HashMap<String, Object> dto = new HashMap<>();
+        dto.put("code", "player_disconnect");
+        HashMap<String, Object> value = new HashMap<>();
+        dto.put("value", value);
+        value.put("session_id", session.getId());
+        value.put("id", session.getId());
+        for (WebSocketSession wss : webSocketSessionSet) {
+            wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
+        }
     }
     @Scheduled(fixedDelay = 30000)
     public void ping() throws Exception {
