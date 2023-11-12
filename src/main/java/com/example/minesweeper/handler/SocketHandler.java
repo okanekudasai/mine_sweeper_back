@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -61,7 +62,9 @@ public class SocketHandler extends TextWebSocketHandler {
         JsonElement element = parser.parse(message.getPayload());
         String event = element.getAsJsonObject().get("event").getAsString();
         JsonElement data = element.getAsJsonObject().get("data").getAsJsonObject();
-        if (event.equals("new_player")) {
+        if (event.equals("pong")) {
+            log.info("퐁! : " + data.getAsJsonObject().get("id").getAsString());
+        } else if (event.equals("new_player")) {
             String id = data.getAsJsonObject().get("id").getAsString();
             Double r = data.getAsJsonObject().get("r").getAsDouble();
             Double c = data.getAsJsonObject().get("c").getAsDouble();
@@ -103,5 +106,13 @@ public class SocketHandler extends TextWebSocketHandler {
         log.info("session:" + session);
         log.info("status:" + status);
         webSocketSessionSet.remove(session);
+    }
+    @Scheduled(fixedDelay = 30000)
+    public void ping() throws Exception {
+        HashMap<String, Object> dto = new HashMap<>();
+        dto.put("code", "ping");
+        for (WebSocketSession wss : webSocketSessionSet) {
+            wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
+        }
     }
 }
