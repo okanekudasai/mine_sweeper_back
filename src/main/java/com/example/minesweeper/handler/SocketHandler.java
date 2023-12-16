@@ -5,6 +5,7 @@ import com.example.minesweeper.others.Node;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,6 +18,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.*;
 
 @Component
+@Getter
 public class SocketHandler extends TextWebSocketHandler {
     private Logger log = LoggerFactory.getLogger(SocketHandler.class);
     ObjectMapper mapper = new ObjectMapper();
@@ -24,7 +26,13 @@ public class SocketHandler extends TextWebSocketHandler {
 
     // 크기는 가로30 * 세로32 지뢰수 198개로 한다.
 //    static int r = 32, c= 60, mine_count = 396;
-    static int r = 20, c= 24, mine_count = 99;
+    static public int default_mine_count = 10;
+    static int r = 20, c= 24, flag_count = 0;
+
+    static public int getFlag_count() {
+        return flag_count;
+    }
+
     static BoardUnit[] [] mine_board;
 
     static HashSet<WebSocketSession> webSocketSessionSet = new HashSet<>();
@@ -39,6 +47,9 @@ public class SocketHandler extends TextWebSocketHandler {
 
     static boolean all_done = true;
 
+    public boolean getAll_done () {
+        return all_done;
+    }
     public BoardUnit [] [] getMine_board () {
         return mine_board;
     }
@@ -134,7 +145,7 @@ public class SocketHandler extends TextWebSocketHandler {
 
                 HashSet<Integer> mine_set = new HashSet<>();
                 Random random = new Random();
-                while (mine_set.size() <= mine_count) {
+                while (mine_set.size() < default_mine_count) {
                     int next = random.nextInt(r*c);
                     if (next / c == cBlock && next % c == rBlock) continue;
                     mine_set.add(next);
@@ -157,7 +168,7 @@ public class SocketHandler extends TextWebSocketHandler {
                     }
                 }
             }
-            // 한번 마인 위치를 출력해 볼게요
+//             한번 마인 위치를 출력해 볼게요
 //            for (BoardUnit [] bu : mine_board) {
 //                for (BoardUnit b : bu) {
 //                    System.out.print((b.isHasMine()) ? "1 " : "0 ");
@@ -178,7 +189,6 @@ public class SocketHandler extends TextWebSocketHandler {
                 // 숫자가 0이라면
                 } else {
                     int [] [] delta = {{-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0}};
-//                    int [] [] delta = {{0,1},{1,0},{0,-1},{-1,0}};
                     ArrayDeque<Node> q = new ArrayDeque<>();
                     mine_board[cBlock][rBlock].setOpened(true);
                     q.offerLast(new Node(cBlock, rBlock));
@@ -200,6 +210,7 @@ public class SocketHandler extends TextWebSocketHandler {
                 HashMap<String, Object> value = new HashMap<>();
                 dto.put("value", value);
                 value.put("board", mine_board);
+                value.put("nokori", default_mine_count - flag_count);
                 for (WebSocketSession wss : webSocketSessionSet) {
                     wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
                 }
@@ -207,12 +218,19 @@ public class SocketHandler extends TextWebSocketHandler {
         } else if (event.equals("set_flag")) {
             int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
             int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
-            mine_board[cBlock][rBlock].setHasFlag(!mine_board[cBlock][rBlock].isHasFlag());
+            if (mine_board[cBlock][rBlock].isHasFlag()) {
+                mine_board[cBlock][rBlock].setHasFlag(false);
+                flag_count--;
+            } else {
+                mine_board[cBlock][rBlock].setHasFlag(true);
+                flag_count++;
+            }
             HashMap<String, Object> dto = new HashMap<>();
             dto.put("code", "get_board");
             HashMap<String, Object> value = new HashMap<>();
             dto.put("value", value);
             value.put("board", mine_board);
+            value.put("nokori", default_mine_count - flag_count);
             for (WebSocketSession wss : webSocketSessionSet) {
                 wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
             }
