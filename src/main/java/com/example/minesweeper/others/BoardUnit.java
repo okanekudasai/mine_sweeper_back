@@ -10,4 +10,5 @@ public class BoardUnit {
     boolean opened;
     boolean hasMine;
     boolean hasFlag;
+    int count;
 }

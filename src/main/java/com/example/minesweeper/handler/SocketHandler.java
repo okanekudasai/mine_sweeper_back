@@ -1,6 +1,7 @@
 package com.example.minesweeper.handler;
 
 import com.example.minesweeper.others.BoardUnit;
+import com.example.minesweeper.others.Node;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
@@ -13,9 +14,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 @Component
 public class SocketHandler extends TextWebSocketHandler {
@@ -24,7 +23,8 @@ public class SocketHandler extends TextWebSocketHandler {
     JsonParser parser = new JsonParser();
 
     // 크기는 가로30 * 세로32 지뢰수 198개로 한다.
-    static int r = 32, c= 60, mine_count = 396;
+//    static int r = 32, c= 60, mine_count = 396;
+    static int r = 20, c= 24, mine_count = 99;
     static BoardUnit[] [] mine_board;
 
     static HashSet<WebSocketSession> webSocketSessionSet = new HashSet<>();
@@ -32,7 +32,7 @@ public class SocketHandler extends TextWebSocketHandler {
         mine_board = new BoardUnit [r] [c];
         for (int i = 0; i < r; i++) {
             for (int j = 0; j < c; j++) {
-                mine_board[i][j] = BoardUnit.builder().opened(false).hasMine(false).hasFlag(false).build();
+                mine_board[i][j] = BoardUnit.builder().opened(false).hasMine(false).hasFlag(false).count(0).build();
             }
         }
     }
@@ -69,8 +69,6 @@ public class SocketHandler extends TextWebSocketHandler {
             String id = data.getAsJsonObject().get("id").getAsString();
             Double r = data.getAsJsonObject().get("r").getAsDouble();
             Double c = data.getAsJsonObject().get("c").getAsDouble();
-            System.out.println("***");
-            System.out.println(data.getAsJsonObject().get("rBlock"));
             int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
             int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
             HashMap<String, Object> dto = new HashMap<>();
@@ -125,6 +123,86 @@ public class SocketHandler extends TextWebSocketHandler {
             for (WebSocketSession wss : webSocketSessionSet) {
                 if (wss.getId().equals(id)) continue;
                 wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
+            }
+        } else if (event.equals("spade_work")) {
+            System.out.println("***");
+            String id = data.getAsJsonObject().get("id").getAsString();
+            int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
+            int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
+
+            if (all_done) {
+                all_done = false;
+
+                HashSet<Integer> mine_set = new HashSet<>();
+                Random random = new Random();
+                while (mine_set.size() <= mine_count) {
+                    int next = random.nextInt(r*c);
+                    if (next / c == cBlock && next % c == rBlock) continue;
+                    mine_set.add(next);
+                }
+
+                mine_board = new BoardUnit [r] [c];
+                for (int i = 0; i < r; i++) {
+                    for (int j = 0; j < c; j++) {
+                        mine_board[i][j] = BoardUnit.builder().opened(false).hasMine(false).hasFlag(false).count(0).build();
+                    }
+                }
+                int [] [] delta = {{-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0}};
+                for (int m : mine_set) {
+                    mine_board[m / c][m % c].setHasMine(true);
+                    for (int [] d : delta) {
+                        int nr = m/c + d[0];
+                        int nc = m%c + d[1];
+                        if (nr < 0 || nr >= r || nc < 0 || nc >= c) continue;
+                        mine_board[nr][nc].setCount(mine_board[nr][nc].getCount() + 1);
+                    }
+                }
+            }
+            // 한번 마인 위치를 출력해 볼게요
+            for (BoardUnit [] bu : mine_board) {
+                for (BoardUnit b : bu) {
+                    System.out.print((b.isHasMine()) ? "1 " : "0 ");
+                }
+                System.out.println();
+            }
+            System.out.println();
+
+            // 클릭한 자리가 마인이면?
+            if (mine_board[cBlock][rBlock].isHasMine()) {
+
+            }
+            // 클릭한 자리가 마인이 아니면?
+            else {
+                // 숫자가 적힌 칸이라면
+                if (mine_board[cBlock][rBlock].getCount() > 0) {
+                    mine_board[cBlock][rBlock].setOpened(true);
+                // 숫자가 0이라면
+                } else {
+                    int [] [] delta = {{-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0}};
+//                    int [] [] delta = {{0,1},{1,0},{0,-1},{-1,0}};
+                    ArrayDeque<Node> q = new ArrayDeque<>();
+                    mine_board[cBlock][rBlock].setOpened(true);
+                    q.offerLast(new Node(cBlock, rBlock));
+                    while (!q.isEmpty()) {
+                        Node node = q.pollFirst();
+                        for (int [] d : delta) {
+                            int next_r = node.getR() + d[0];
+                            int next_c = node.getC() + d[1];
+                            if (next_r < 0 || next_r >= r || next_c < 0 || next_c >= c) continue;
+                            if (mine_board[next_r][next_c].isOpened()) continue;
+                            mine_board[next_r][next_c].setOpened(true);
+                            if (mine_board[next_r][next_c].getCount() == 0) q.offerLast(new Node(next_r, next_c));
+                        }
+                    }
+                }
+                HashMap<String, Object> dto = new HashMap<>();
+                dto.put("code", "get_board");
+                HashMap<String, Object> value = new HashMap<>();
+                dto.put("value", value);
+                value.put("board", mine_board);
+                for (WebSocketSession wss : webSocketSessionSet) {
+                    wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
+                }
             }
         }
     }
