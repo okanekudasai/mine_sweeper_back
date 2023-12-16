@@ -48,12 +48,6 @@ public class SocketHandler extends TextWebSocketHandler {
         log.info("누군가가 소켓에 연결되었어요!");
         log.info("session:" + session.getId());
         webSocketSessionSet.add(session);
-        HashMap<String, Object> dto = new HashMap<>();
-        dto.put("code", "my_session_id");
-        HashMap<String, Object> value = new HashMap<>();
-        dto.put("value", value);
-        value.put("my_session_id", session.getId());
-        session.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
     }
 
     @Override
@@ -64,10 +58,19 @@ public class SocketHandler extends TextWebSocketHandler {
         JsonElement data = element.getAsJsonObject().get("data").getAsJsonObject();
         if (event.equals("pong")) {
             log.info("퐁! : " + data.getAsJsonObject().get("id").getAsString());
+        } else if (event.equals("connect_game")) {
+            HashMap<String, Object> dto = new HashMap<>();
+            dto.put("code", "my_session_id");
+            HashMap<String, Object> value = new HashMap<>();
+            dto.put("value", value);
+            value.put("my_session_id", session.getId());
+            session.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
         } else if (event.equals("new_player")) {
             String id = data.getAsJsonObject().get("id").getAsString();
             Double r = data.getAsJsonObject().get("r").getAsDouble();
             Double c = data.getAsJsonObject().get("c").getAsDouble();
+            System.out.println("***");
+            System.out.println(data.getAsJsonObject().get("rBlock"));
             int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
             int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
             HashMap<String, Object> dto = new HashMap<>();
