@@ -83,6 +83,8 @@ public class SocketHandler extends TextWebSocketHandler {
             String id = data.getAsJsonObject().get("id").getAsString();
             Double r = data.getAsJsonObject().get("r").getAsDouble();
             Double c = data.getAsJsonObject().get("c").getAsDouble();
+            int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
+            int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
             HashMap<String, Object> dto = new HashMap<>();
             dto.put("code", "take_position");
             HashMap<String, Object> value = new HashMap<>();
@@ -90,6 +92,8 @@ public class SocketHandler extends TextWebSocketHandler {
             value.put("session_id", session.getId());
             value.put("r", r);
             value.put("c", c);
+            value.put("rBlock", rBlock);
+            value.put("cBlock", cBlock);
             for (WebSocketSession wss : webSocketSessionSet) {
                 if (wss.getId().equals(id)) {
                     wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
