@@ -125,7 +125,6 @@ public class SocketHandler extends TextWebSocketHandler {
                 wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
             }
         } else if (event.equals("spade_work")) {
-            System.out.println("***");
             String id = data.getAsJsonObject().get("id").getAsString();
             int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
             int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
@@ -159,13 +158,13 @@ public class SocketHandler extends TextWebSocketHandler {
                 }
             }
             // 한번 마인 위치를 출력해 볼게요
-            for (BoardUnit [] bu : mine_board) {
-                for (BoardUnit b : bu) {
-                    System.out.print((b.isHasMine()) ? "1 " : "0 ");
-                }
-                System.out.println();
-            }
-            System.out.println();
+//            for (BoardUnit [] bu : mine_board) {
+//                for (BoardUnit b : bu) {
+//                    System.out.print((b.isHasMine()) ? "1 " : "0 ");
+//                }
+//                System.out.println();
+//            }
+//            System.out.println();
 
             // 클릭한 자리가 마인이면?
             if (mine_board[cBlock][rBlock].isHasMine()) {
@@ -190,6 +189,7 @@ public class SocketHandler extends TextWebSocketHandler {
                             int next_c = node.getC() + d[1];
                             if (next_r < 0 || next_r >= r || next_c < 0 || next_c >= c) continue;
                             if (mine_board[next_r][next_c].isOpened()) continue;
+                            if (mine_board[next_r][next_c].isHasFlag()) continue;
                             mine_board[next_r][next_c].setOpened(true);
                             if (mine_board[next_r][next_c].getCount() == 0) q.offerLast(new Node(next_r, next_c));
                         }
@@ -204,6 +204,19 @@ public class SocketHandler extends TextWebSocketHandler {
                     wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
                 }
             }
+        } else if (event.equals("set_flag")) {
+            int rBlock = data.getAsJsonObject().get("rBlock").getAsInt();
+            int cBlock = data.getAsJsonObject().get("cBlock").getAsInt();
+            mine_board[cBlock][rBlock].setHasFlag(!mine_board[cBlock][rBlock].isHasFlag());
+            HashMap<String, Object> dto = new HashMap<>();
+            dto.put("code", "get_board");
+            HashMap<String, Object> value = new HashMap<>();
+            dto.put("value", value);
+            value.put("board", mine_board);
+            for (WebSocketSession wss : webSocketSessionSet) {
+                wss.sendMessage(new TextMessage(mapper.writeValueAsString(dto)));
+            }
+
         }
     }
 
