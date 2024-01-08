@@ -2,3 +2,6 @@ server:
   port: 9999
   servlet:
     context-path: /api
+
+leet.secret.client_id: 26139f667012e408eea6
+leet.secret.client_secret: a11878378c3b2db1a241502f9bf331948b7caab7
