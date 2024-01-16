@@ -45,6 +45,7 @@ public class TempController {
         }
         return "error";
     }
+
     @GetMapping("/BOJSubmit/{username}/{pNum}")
     HashMap<String, String> BOJSubmit(@PathVariable("username") String username, @PathVariable("pNum") String p_num) {
         WebClient webClient = WebClient.builder().build();
